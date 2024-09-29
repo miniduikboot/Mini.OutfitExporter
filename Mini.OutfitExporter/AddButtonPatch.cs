@@ -39,7 +39,7 @@ public static class AddButtonPatch
 		}
 		else
 		{
-			AddButton(template, "Copy Button", OutfitExporterPlugin.CopyButtonSprite, 9.2f, (renderer) =>
+			AddButton(template, "Copy Button", OutfitExporterPlugin.CopyButtonSprite, 1.16f, (renderer) =>
 			{
 				// Set the clipboard to the currently equipped outfit
 				GUIUtility.systemCopyBuffer = GetSerializedOutfit();
@@ -53,7 +53,7 @@ public static class AddButtonPatch
 				})));
 			});
 
-			AddButton(template, "Paste Button", OutfitExporterPlugin.PasteButtonSprite, 10, (renderer) =>
+			AddButton(template, "Paste Button", OutfitExporterPlugin.PasteButtonSprite, 0.36f, (renderer) =>
 			{
 				renderer.color = Color.yellow;
 				bool success = SetSerializedOutfit(GUIUtility.systemCopyBuffer, __instance.PreviewArea);
@@ -73,7 +73,7 @@ public static class AddButtonPatch
 	{
 		var button = GameObject.Instantiate(template, template.transform.parent);
 		button.name = $"[{OutfitExporterPlugin.Id}] {name}";
-		button.transform.localPosition += Vector3.right * position;
+
 		var btnPassive = button.GetComponent<PassiveButton>();
 		var btnRenderer = button.GetComponent<SpriteRenderer>();
 		btnPassive.OnClick.RemoveAllListeners();
@@ -88,6 +88,11 @@ public static class AddButtonPatch
 		{
 			btnRenderer.sprite = sprite;
 		}
+
+		var btnAspPos = button.GetComponent<AspectPosition>();
+		btnAspPos.Alignment = AspectPosition.EdgeAlignments.Right;
+		btnAspPos.DistanceFromEdge = new Vector3(position, 0.03f, -5f);
+		btnAspPos.AdjustPosition();
 	}
 
 	private static string GetSerializedOutfit()

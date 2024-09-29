@@ -17,33 +17,29 @@
 
 namespace Mini.OutfitExporter;
 
+using System.Text.Json;
 using BepInEx;
 using BepInEx.Unity.IL2CPP;
 using HarmonyLib;
-using System.Text.Json;
-using AmongUs.Data;
-using UnityEngine;
-using System.Collections.Generic;
-using System.Reflection;
-using Il2CppInterop.Runtime.InteropTypes.Arrays;
-using System;
 using Reactor;
 using Reactor.Utilities;
 using Reactor.Utilities.Extensions;
+using UnityEngine;
 
 [BepInAutoPlugin]
 [BepInProcess("Among Us.exe")]
 [BepInDependency(ReactorPlugin.Id)]
 public partial class OutfitExporterPlugin : BasePlugin
 {
-	private static Sprite copyButtonSprite;
-	private static Sprite pasteButtonSprite;
+	internal static readonly JsonSerializerOptions JsonSerializerOptions = new() { IncludeFields = true };
 
-	private static JsonSerializerOptions jsonSerializerOptions = new () { IncludeFields = true };
+	public Harmony Harmony { get; } = new(Id);
 
-	public static BepInEx.Logging.ManualLogSource? Logger { get; private set; }
+	internal static Sprite? CopyButtonSprite { get; private set; }
 
-	public Harmony Harmony { get; } = new (Id);
+	internal static Sprite? PasteButtonSprite { get; private set; }
+
+	internal static BepInEx.Logging.ManualLogSource? Logger { get; private set; }
 
 	public override void Load()
 	{
@@ -51,93 +47,18 @@ public partial class OutfitExporterPlugin : BasePlugin
 		this.Harmony.PatchAll();
 
 		// Load assets
+		Logger.LogInfo("Loading assets");
 		var bundle = AssetBundleManager.Load("default");
-		copyButtonSprite = bundle.LoadAsset<Sprite>("CopyButton")?.DontUnload();
-		pasteButtonSprite = bundle.LoadAsset<Sprite>("PasteButton")?.DontUnload();
-		bundle.Unload(false);
-	}
-
-	public static string GetSerializedOutfit()
-	{
-		var outfit = DataManager.Player.Customization;
-		var ser = new SerializedOutfit(outfit);
-		return JsonSerializer.Serialize(ser, jsonSerializerOptions);
-	}
-
-	public static bool SetSerializedOutfit(string data, PoolablePlayer previewArea)
-	{
-		SerializedOutfit? ser = null;
-		try
+		if (bundle == null)
 		{
-			ser = JsonSerializer.Deserialize<SerializedOutfit>(data);
+			Logger.LogError($"Could not load asset bundle");
 		}
-		catch (JsonException e)
+		else
 		{
-			Logger.LogError($"Couldn't load outfit: {e.Message}");
-		}
-
-		// Check if serialization failed
-		var ret = ser != null;
-		if (ret)
-		{
-			// Set the current AU outfit
-			ser.SetData(DataManager.Player.Customization);
-			previewArea.UpdateFromDataManager(PlayerMaterial.MaskType.None);
-		}
-
-		return ret;
-	}
-
-	[HarmonyPatch(typeof(PlayerCustomizationMenu), nameof(PlayerCustomizationMenu.Start))]
-	public static class AddButtonPatch
-	{
-		public static void Postfix(PlayerCustomizationMenu __instance)
-		{
-			var template = GameObject.Find("CloseButton");
-			Logger?.LogInfo($"Got {template} | {template == null}");
-			var copyButton = GameObject.Instantiate(template, template.transform.parent);
-			copyButton.name = $"[{Id}] Copy Button";
-			copyButton.transform.localPosition += Vector3.right * 9.2f;
-			var copyButtonPassive = copyButton.GetComponent<PassiveButton>();
-			var copyButtonRenderer = copyButton.GetComponent<SpriteRenderer>();
-			copyButtonRenderer.sprite = copyButtonSprite;
-			copyButtonPassive.OnClick.RemoveAllListeners();
-			copyButtonPassive.OnClick = new UnityEngine.UI.Button.ButtonClickedEvent();
-			copyButtonPassive.OnClick.AddListener((Action)(() =>
-			{
-				// Set the clipboard to the currently equipped outfit
-				GUIUtility.systemCopyBuffer = GetSerializedOutfit();
-				copyButtonRenderer.color = Color.green;
-				__instance.StartCoroutine(Effects.Lerp(1f, new System.Action<float>((p) =>
-				{
-					if (p > 0.95)
-					{
-						copyButtonRenderer.color = Color.white;
-					}
-				})));
-			}));
-
-			var pasteButton = GameObject.Instantiate(template, template.transform.parent);
-			pasteButton.name = $"[{Id}] Paste Button";
-			pasteButton.transform.localPosition += Vector3.right * 10.0f;
-			var pasteButtonPassive = pasteButton.GetComponent<PassiveButton>();
-			var pasteButtonRenderer = pasteButton.GetComponent<SpriteRenderer>();
-			pasteButtonRenderer.sprite = pasteButtonSprite;
-			pasteButtonPassive.OnClick.RemoveAllListeners();
-			pasteButtonPassive.OnClick = new UnityEngine.UI.Button.ButtonClickedEvent();
-			pasteButtonPassive.OnClick.AddListener((Action)(() =>
-			{
-				pasteButtonRenderer.color = Color.yellow;
-				bool success = SetSerializedOutfit(GUIUtility.systemCopyBuffer, __instance.PreviewArea);
-				pasteButtonRenderer.color = success ? Color.green : Color.red;
-				__instance.StartCoroutine(Effects.Lerp(1f, new System.Action<float>((p) =>
-				{
-					if (p > 0.95)
-					{
-						pasteButtonRenderer.color = Color.white;
-					}
-				})));
-			}));
+			CopyButtonSprite = bundle.LoadAsset<Sprite>("CopyButton")?.DontUnload();
+			PasteButtonSprite = bundle.LoadAsset<Sprite>("PasteButton")?.DontUnload();
+			bundle.Unload(false);
+			Logger.LogInfo($"Loaded {CopyButtonSprite == null} {PasteButtonSprite == null}");
 		}
 	}
 }

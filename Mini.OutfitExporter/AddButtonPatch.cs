@@ -31,7 +31,7 @@ public static class AddButtonPatch
 	public static void Postfix(PlayerCustomizationMenu __instance)
 #pragma warning restore SA1313
 	{
-		var template = GameObject.Find("CloseButton");
+		var template = GameObject.Find("PlayerCustomizationMenu(Clone)/Header/CloseButton");
 
 		if (template == null)
 		{

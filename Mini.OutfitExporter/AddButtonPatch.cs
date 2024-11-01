@@ -22,6 +22,7 @@ using System.Text.Json;
 using AmongUs.Data;
 using HarmonyLib;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [HarmonyPatch(typeof(PlayerCustomizationMenu), nameof(PlayerCustomizationMenu.Start))]
 public static class AddButtonPatch
@@ -31,15 +32,23 @@ public static class AddButtonPatch
 	public static void Postfix(PlayerCustomizationMenu __instance)
 #pragma warning restore SA1313
 	{
-		var template = GameObject.Find("PlayerCustomizationMenu(Clone)/Header/CloseButton");
+		// The customization menu in game vs the inventory menu is named differently
+		var template = GameObject.Find("PlayerCustomizationMenu(Clone)/Header/CloseButton")
+			?? GameObject.Find("LobbyPlayerCustomizationMenu(Clone)/Header/CloseButton");
+
+		// Y position depends on the scene, OnlineGame renders a few extra buttons, so move below them
+		var scene = SceneManager.GetActiveScene();
+		var y_position = scene.name == "OnlineGame" ? 3.8f : 3.03f;
+
+		OutfitExporterPlugin.Logger?.LogInfo("Opening Customization menu in Scene {scene.name}");
 
 		if (template == null)
 		{
-			OutfitExporterPlugin.Logger?.LogError("Could not find CloseButton in PlayerCustomizationMenu");
+			OutfitExporterPlugin.Logger?.LogError("Could not find CloseButton in (Lobby)PlayerCustomizationMenu");
 		}
 		else
 		{
-			AddButton(template, "Copy Button", OutfitExporterPlugin.CopyButtonSprite, 1.16f, (renderer) =>
+			AddButton(template, "Copy Button", OutfitExporterPlugin.CopyButtonSprite, 1.29f, y_position, (renderer) =>
 			{
 				// Set the clipboard to the currently equipped outfit
 				GUIUtility.systemCopyBuffer = GetSerializedOutfit();
@@ -53,7 +62,7 @@ public static class AddButtonPatch
 				})));
 			});
 
-			AddButton(template, "Paste Button", OutfitExporterPlugin.PasteButtonSprite, 0.36f, (renderer) =>
+			AddButton(template, "Paste Button", OutfitExporterPlugin.PasteButtonSprite, 0.43f, y_position, (renderer) =>
 			{
 				renderer.color = Color.yellow;
 				bool success = SetSerializedOutfit(GUIUtility.systemCopyBuffer, __instance.PreviewArea);
@@ -69,7 +78,7 @@ public static class AddButtonPatch
 		}
 	}
 
-	private static void AddButton(GameObject template, string name, Sprite? sprite, float position, Action<SpriteRenderer> listener)
+	private static void AddButton(GameObject template, string name, Sprite? sprite, float x_position, float y_position, Action<SpriteRenderer> listener)
 	{
 		var button = GameObject.Instantiate(template, template.transform.parent);
 		button.name = $"[{OutfitExporterPlugin.Id}] {name}";
@@ -90,8 +99,8 @@ public static class AddButtonPatch
 		}
 
 		var btnAspPos = button.GetComponent<AspectPosition>();
-		btnAspPos.Alignment = AspectPosition.EdgeAlignments.Right;
-		btnAspPos.DistanceFromEdge = new Vector3(position, 0.03f, -5f);
+		btnAspPos.Alignment = AspectPosition.EdgeAlignments.RightTop;
+		btnAspPos.DistanceFromEdge = new Vector3(x_position, y_position, -5f);
 		btnAspPos.AdjustPosition();
 	}
 

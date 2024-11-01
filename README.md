@@ -4,6 +4,10 @@ Import and Export Among Us outfits to JSON so you can store your favorite outfit
 
 Status: Maintenance. I'm currently not planning to expand the scope of this mod. If it is necessary to make this mod compatible with new versions of the game, I'll try to update it within a month of release.
 
+
+https://github.com/user-attachments/assets/c3cefc17-4022-4a33-8eb3-a60653c08474
+
+
 ## How to use
 
 1. Install this mod as any other mod by install BepInEx, then dropping it in your plugins folder next to the Reactor DLL.
